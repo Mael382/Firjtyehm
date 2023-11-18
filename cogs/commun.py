@@ -4,12 +4,12 @@ from discord import app_commands
 from discord.ext import commands
 
 
-class LynkrToCommun(commands.Cog):
+class Commun(commands.Cog, name = "commun"):
     def __init__(self, bot) -> None:
         self.bot = bot
 
-    @app_commands.command(name = "communlynkr", description = "Traduit en Commun, un texte écrit en Lynkr")
-    async def lynkr_to_commun_slash(self, interaction: discord.Interaction, text: str):
+    @app_commands.command(name = "commun", description = "Traduit en Commun, un texte écrit en Lynkr")
+    async def commun_slash(self, interaction: discord.Interaction, text: str):
         await interaction.response.send_message("Cette fonctionnalité est en cours de développement, merci de bien vouloir patienter !", ephemeral = True)
 
 
