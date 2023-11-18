@@ -23,6 +23,34 @@ df_ALL = pd.read_csv("./codex/lynkrALL.csv").astype(pd.StringDtype(storage = "py
 # data = data.astype(pd.StringDtype(storage = "pyarrow"))
 # data.to_csv("lynkr.csv", index = False)
 
+
+def tokenize(text: str, nlp: spacy.lang.fr.French) -> list[dict[str, str | None]]:
+    doc = nlp(text)
+    tokens = list()
+
+    for token in doc:
+        new_token = {"text": token.lower_,
+                     "lemma": token.lemma_,
+                     "pos":token.pos_,
+                     "shape": token.shape_,
+                     "number": None,
+                     "tense": None,
+                     "polarity": None}
+
+        morph = token.morph.to_dict()
+        if "Number" in morph:
+            new_token["number"] = morph["Number"]
+        if "Tense" in morph:
+            new_token["tense"] = morph["Tense"]
+        if "Polarity" in morph:
+            new_token["polarity"] = morph["Polarity"]
+
+        tokens.append(new_token)
+
+    return tokens
+
+
+# deprecated
 def parse(text: str) -> List[Dict[str, str]]:
     doc = nlp(text)
     tokens = list()
@@ -43,6 +71,7 @@ def parse(text: str) -> List[Dict[str, str]]:
         tokens.append(new_token)
 
     return tokens
+
 
 def translate(tokens: List[Dict[str, str]]) -> Tuple[str, List[Dict[str, str]]]:
     # Ajouter nombres, ignorances des noms propres inconnus, "au revoir",
