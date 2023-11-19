@@ -88,6 +88,12 @@ def apply_case(token: dict[str, str | None], translated_token: str) -> str:
     return cased_translated_token
 
 
+def translate_au_revoir(tokens: list[dict[str, str | None]]) -> tuple(str, str):
+    translated_tokens = (apply_case(tokens[0], "paers"), apply_case(tokens[1], "esperita"))
+
+    return translated_tokens
+
+
 # deprecated
 def translate(tokens: List[Dict[str, str]]) -> Tuple[str, List[Dict[str, str]]]:
     # Ajouter nombres, ignorances des noms propres inconnus, "au revoir",
