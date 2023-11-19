@@ -9,9 +9,6 @@ import pandas as pd
 from text_to_num import text2num
 # from num2words import num2words
 
-# DEPRECATED
-# from typing import List, Dict, Tuple
-
 
 ANP_PATH = "./codex/lynkrANP.csv"
 VER_PATH = "./codex/lynkrVER.csv"
@@ -23,7 +20,7 @@ NLP = spacy.load("fr_dep_news_trf")
 ANP_SERIES = pd.read_csv(ANP_PATH).astype(pd.StringDtype(storage = "pyarrow")).set_index("lemma").squeeze()
 VER_SERIES = pd.read_csv(VER_PATH).astype(pd.StringDtype(storage = "pyarrow")).set_index("lemma").squeeze()
 # NUM_SERIES = pd.read_csv(NUM_PATH).astype(pd.StringDtype(storage = "pyarrow")).set_index("lemma").squeeze()
-NUM_SERIES = None # Le CSV doit encore être réalisé !
+NUM_SERIES = None # Le CSV doit encore être réalisé
 ALL_SERIES = pd.read_csv(ALL_PATH).astype(pd.StringDtype(storage = "pyarrow")).set_index("lemma").squeeze()
 # Faire la chasse aux ajectifs possessifs (update : wtf, pourquoi j'ai écrit ça ?)
 
@@ -41,7 +38,7 @@ def tokenize(text: str, nlp: spacy.lang.fr.French) -> list[dict[str, str | None]
     for token in doc:
         new_token = {"text": token.lower_,
                      "lemma": token.lemma_,
-                     "pos":token.pos_,
+                     "pos": token.pos_,
                      "shape": token.shape_,
                      "number": None,
                      "tense": None,
@@ -60,124 +57,148 @@ def tokenize(text: str, nlp: spacy.lang.fr.French) -> list[dict[str, str | None]
     return tokens
 
 
-# DEPRECATED
-# def parse(text: str) -> List[Dict[str, str]]:
-#     doc = nlp(text)
-#     tokens = list()
+def translate(tokens: list[dict[str, str | None]]) -> str:
 
-#     for token in doc:
-#         new_token = {"pos":token.pos_,"lemma": token.lemma_.lower(),
-#                      "text": token.lower_, "shape": token.shape_, "number": None,
-#                      "gender": None, "tense": None, "polarity": None}
-#         morph = token.morph.to_dict()
-#         if "Number" in morph:
-#             new_token["number"] = morph["Number"]
-#         if "Gender" in morph:
-#             new_token["gender"] = morph["Gender"]
-#         if "Tense" in morph:
-#             new_token["tense"] = morph["Tense"]
-#         if "Polarity" in morph:
-#             new_token["polarity"] = morph["Polarity"]
-#         tokens.append(new_token)
+    def apply_case(text: str, shape: str) -> str:
 
-#     return tokens
+        if shape.islower():
+            cased_text = text.lower()
+        elif shape.istitle():
+            cased_text = text.title()
+        elif shape.isupper():
+            cased_text = text.upper()
+        else:
+            cased_text = text.capitalize()
 
+        return cased_text
 
-def apply_case(token: dict[str, str | None], translated_token: str) -> str:
-    shape = token["shape"]
+    def apply_spaces(texts: list[str]) -> list[str]:
+        spaced_texts = [texts[0]]
 
-    if shape.islower():
-        cased_translated_token = translated_token.lower()
-    elif shape.istitle():
-        cased_translated_token = translated_token.title()
-    elif shape.isupper():
-        cased_translated_token = translated_token.upper()
-    else:
-        cased_translated_token = translated_token.capitalize()
+        if len(texts) > 1:
+            for text in texts[1:]:
+            # Je peux sûrement faire quelque chose de plus propre ici
+                if (text not in ('"', ")", ",", "-", ".", "]", "}")) and (spaced_texts[-1] not in ('"', "(", "-", "]", "}")):
+                    spaced_texts.append(" ")
+                elif (text == '"') and (spaced_texts.count('"')%2 == 0):
+                    spaced_texts.append(" ")
+                elif (text not in (")", ",", "-", ".", "]", "}")) and (spaced_texts[-1] == '"') and (spaced_texts.count('"')%2 == 0):
+                    spaced_texts.append(" ")
+                spaced_texts.append(text)
 
-    return cased_translated_token
+        return spaced_texts
 
+    def translate_au_revoir(shapes: tuple[str, str]) -> tuple[str, str]:
+        translated_tokens = (apply_case("paers", shapes[0]), apply_case("esperita", shapes[1]))
 
-def apply_spaces(translated_tokens: list[str]) -> list[str]:
-    spaced_translated_tokens = [translated_tokens[0]]
+        return translated_tokens
 
-    if len(translated_tokens) > 1:
-        for translated_token in translated_tokens[1:]:
-            if (translated_token not in ('"', ")", ",", "-", ".", "]", "}")) and (spaced_translated_tokens[-1] not in ('"', "(", "-", "]", "}")):
-                spaced_translated_tokens.append(" ")
-            elif (translated_token == '"') and (spaced_translated_tokens.count('"')%2 == 0):
-                spaced_translated_tokens.append(" ")
-            elif (translated_token not in (")", ",", "-", ".", "]", "}")) and (spaced_translated_tokens[-1] == '"') and (spaced_translated_tokens.count('"')%2 == 0):
-                spaced_translated_tokens.append(" ")
-            spaced_translated_tokens.append(translated_token)
+    def translate_peut_etre(shape: str) -> str:
+        translated_token = apply_case("pyeséa", shape)
 
-    return spaced_translated_tokens
+        return translated_token
 
+    def translate_adj_noun_propn(token: dict[str, str | None], series: pd.core.series.Series = ANP_SERIES) -> str:
+        lemma = token["lemma"]
+        shape = token["shape"]
 
-def translate_au_revoir(tokens: list[dict[str, str | None]]) -> tuple[str, str]:
-    translated_tokens = (apply_case(tokens[0], "paers"), apply_case(tokens[1], "esperita"))
+        if lemma in series.index:
+            translated_token = series[lemma]
+            if (token["number"] == "Plur") and (translated_token[-1] != "s"):
+                translated_token += "s"
+            translated_token = apply_case(translated_token, shape)
+        else:
+            # Ajouter une fonctionnalitée de recherche de synonymes
+            translated_token = "**" + apply_case(token["text"], shape) + "**"
 
-    return translated_tokens
+        return translated_token
 
+    def translate_verb_aux(token: dict[str, str | None], negation: bool, series: pd.core.series.Series = VER_SERIES) -> str:
+        lemma = token["lemma"]
+        shape = token["shape"]
 
-def translate_peut_etre(tokens: list[dict[str, str | None]]) -> str:
-    translated_tokens = apply_case(tokens[0], "pyeséa")
+        if negation:
+            prefix = "fran-"
+        else:
+            prefix = ""
 
-    return translated_tokens
+        if lemma == "mourir":
+            translated_token = apply_case(prefix + "mortilem", shape)
+        elif lemma == "vivre":
+            translated_token = apply_case(prefix + "virvilem", shape)
+        elif lemma in series.index:
+            tense = token["tense"]
+            translated_token = prefix + series[lemma]
+            if tense == "Pres":
+                translated_token = translated_token[:-1]
+            elif tense == "Past":
+                translated_token = translated_token[:-1] + "p"
+            elif tense == "Fut":
+                translated_token = translated_token[:-1] + "f"
+            translated_token = apply_case(translated_token, shape)
+        else:
+            # Ajouter une fonctionnalitée de recherche de synonymes
+            translated_token = "**" + apply_case(token["text"], shape) + "**"
 
+        return translated_token
 
-def translate_neg(token: dict[str, str | None]) -> str:
-    translated_token = ""
-
-    return translated_token
-
-
-def translate_adj_noun_propn(token: dict[str, str | None], series: pd.core.series.Series = ANP_SERIES) -> str:
-    lemma = token["lemma"]
-
-    if lemma in series.index:
-        number = token["number"]
-        translated_token = series[lemma]
-        if (number == "Plur") and (translated_token[-1] != "s"):
-            translated_token += "s"
-        translated_token = apply_case(token, translated_token)
-    else:
+    def translate_num(token: dict[str, str | None], series: pd.core.series.Series = NUM_SERIES) -> str:
         text = token["text"]
-        translated_token = "**" + apply_case(token, text) + "**"
+        shape = token["shape"]
 
-    return translated_token
+        if "d" in shape:
+            translated_token = text
+        else:
+            try:
+                numbered_token = text2num(token["lemma"], lang = "fr", relaxed = True)
+                # Créer une opération num2word pour le Lynkr
+                translated_token = str(numbered_token)
+            except:
+                translated_token = "**" + apply_case(text, shape) + "**"
 
+        return translated_token
 
-def translate_verb_aux(token: dict[str, str | None], negation: bool, series: pd.core.series.Series = VER_SERIES) -> str:
-    lemma = token["lemma"]
+    def translate_punct(token: dict[str, str | None]) -> str:
+        translated_token = token["text"]
 
-    if negation:
-        prefix = "fran-"
-    else:
-        prefix = ""
+        return translated_token
 
-    if lemma == "mourir":
-        translated_token = prefix + "mortilem"
-        translated_token = apply_case(token, translated_token)
-    elif lemma == "vivre":
-        translated_token = prefix + "virvilem"
-        translated_token = apply_case(token, translated_token)
-    elif lemma in series.index:
-        tense = token["tense"]
-        translated_token = prefix + series[lemma]
-        if tense == "Pres":
-            translated_token = translated_token[:-1]
-        elif tense == "Past":
-            translated_token = translated_token[:-1] + "p"
-        elif tense == "Fut":
-            translated_token = translated_token[:-1] + "f"
-        translated_token = apply_case(token, translated_token)
-    else:
-        # Ajouter une fonctionnalitée de recherche de synonymes existants
-        text = token["text"]
-        translated_token = "**" + apply_case(token, text) + "**"
+    def translate_default(token: dict[str, str | None], series: pd.core.series.Series = ALL_SERIES) -> str:
+        lemma = token["lemma"]
+        shape = token["shape"]
 
-    return translated_token
+        if lemma in series.index:
+            translated_token = apply_case(series[lemma], shape)
+        else:
+            # Ajouter une fonctionnalitée de recherche de synonymes
+            translated_token = "**" + apply_case(token["text"], shape) + "**"
+
+        return translated_token
+
+    translated_tokens = []
+    penultimate_token = {"text": None, "lemma": None, "pos": None, "shape": None, "number": None, "tense": None, "polarity": None}
+    antepenultimate_token = {"text": None, "lemma": None, "pos": None, "shape": None, "number": None, "tense": None, "polarity": None}
+    negation = False
+
+    for i, token in enumerate(tokens):
+        if i >= 1:
+            penultimate_token = tokens[i - 1]
+        if i >= 2:
+            antepenultimate_token = tokens[i - 2]
+
+        if (token["text"] == "revoir") and (penultimate_token["text"] == "au"):
+            translated_tokens.pop()
+            translated_tokens.extend(translate_au_revoir((token["shape"], penultimate_token["shape"])))
+
+        elif (token["text"] == "être") and (penultimate_token["text"] == "-") and (antepenultimate_token["text"] == "peut"):
+            translated_tokens.pop()
+            translated_tokens.pop()
+            translated_tokens.append(translate_peut_etre(antepenultimate_token["shape"]))
+
+        elif token["text"] in ("ne", "n'", "ni"):
+            negation = True
+        elif (token["text"] == "pas") and (token["pos"] == "ADV"):
+            
 
 
 # DEPRECATED
