@@ -104,7 +104,7 @@ def apply_spaces(translated_tokens: list[str]) -> list[str]:
     return spaced_translated_tokens
 
 
-def translate_au_revoir(tokens: list[dict[str, str | None]]) -> tuple(str, str):
+def translate_au_revoir(tokens: list[dict[str, str | None]]) -> tuple[str, str]:
     translated_tokens = (apply_case(tokens[0], "paers"), apply_case(tokens[1], "esperita"))
 
     return translated_tokens
@@ -114,6 +114,35 @@ def translate_peut_etre(tokens: list[dict[str, str | None]]) -> str:
     translated_tokens = apply_case(tokens[0], "pyeséa")
 
     return translated_tokens
+
+
+def translate_verbs(token: dict[str, str | None], negation: bool = False, series: pd.core.series.Series = VERBS_SERIES) -> str:
+    lemma = token["lemma"]
+
+    if negation:
+        prefix = "fran-"
+    else:
+        prefix = ""
+
+    if lemma == "mourir":
+        translated_token = prefix + "mortilem"
+    elif lemma == "vivre":
+        translated_token = prefix + "virvilem"
+    elif lemma in series.index:
+        tense = token["tense"]
+        translated_token = prefix + series[lemma]
+        if tense == "Pres":
+            translated_token = translated_token[:-1]
+        elif tense == "Past":
+            translated_token = translated_token[:-1] + "p"
+        elif tense == "Fut":
+            translated_token = translated_token[:-1] + "f"
+    else:
+        # Ajouter une fonctionnalitée de recherche de synonymes existants
+        text = token["text"]
+        translated_token = "**" + text + "**"
+
+    return translated_token
 
 
 # deprecated
