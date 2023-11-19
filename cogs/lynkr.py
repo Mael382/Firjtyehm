@@ -94,6 +94,12 @@ def translate_au_revoir(tokens: list[dict[str, str | None]]) -> tuple(str, str):
     return translated_tokens
 
 
+def translate_peut_etre(tokens: list[dict[str, str | None]]) -> str:
+    translated_tokens = apply_case(tokens[0], "pyeséa")
+
+    return translated_tokens
+
+
 # deprecated
 def translate(tokens: List[Dict[str, str]]) -> Tuple[str, List[Dict[str, str]]]:
     # Ajouter nombres, ignorances des noms propres inconnus, "au revoir",
