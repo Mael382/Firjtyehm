@@ -73,6 +73,22 @@ def parse(text: str) -> List[Dict[str, str]]:
     return tokens
 
 
+def apply_case(token: dict[str, str | None], translated_token: str) -> str:
+    shape = token["shape"]
+
+    if shape.islower():
+        cased_translated_token = translated_token.lower()
+    elif shape.istitle():
+        cased_translated_token = translated_token.title()
+    elif shape.isupper():
+        cased_translated_token = translated_token.upper()
+    else:
+        cased_translated_token = translated_token.capitalize()
+
+    return cased_translated_token
+
+
+# deprecated
 def translate(tokens: List[Dict[str, str]]) -> Tuple[str, List[Dict[str, str]]]:
     # Ajouter nombres, ignorances des noms propres inconnus, "au revoir",
     # "race + sehr", "en-", "En-Bas", "peut-être", "quelque chose", "quelqu'un",
