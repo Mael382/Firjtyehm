@@ -26,7 +26,7 @@ df_ALL = pd.read_csv("./codex/lynkrALL.csv").astype(pd.StringDtype(storage = "py
 
 def tokenize(text: str, nlp: spacy.lang.fr.French) -> list[dict[str, str | None]]:
     doc = nlp(text)
-    tokens = list()
+    tokens = []
 
     for token in doc:
         new_token = {"text": token.lower_,
@@ -86,6 +86,22 @@ def apply_case(token: dict[str, str | None], translated_token: str) -> str:
         cased_translated_token = translated_token.capitalize()
 
     return cased_translated_token
+
+
+def apply_spaces(translated_tokens: list[str]) -> list[str]:
+    spaced_translated_tokens = [translated_tokens[0]]
+
+    if len(translated_tokens) > 1:
+        for translated_token in translated_tokens[1:]:
+            if (translated_token not in ('"', ")", ",", "-", ".", "]", "}")) and (spaced_translated_tokens[-1] not in ('"', "(", "-", "]", "}")):
+                spaced_translated_tokens.append(" ")
+            elif (translated_token == '"') and (spaced_translated_tokens.count('"')%2 == 0):
+                spaced_translated_tokens.append(" ")
+            elif (translated_token not in (")", ",", "-", ".", "]", "}")) and (spaced_translated_tokens[-1] == '"') and (spaced_translated_tokens.count('"')%2 == 0):
+                spaced_translated_tokens.append(" ")
+            spaced_translated_tokens.append(translated_token)
+
+    return spaced_translated_tokens
 
 
 def translate_au_revoir(tokens: list[dict[str, str | None]]) -> tuple(str, str):
