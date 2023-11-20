@@ -215,7 +215,7 @@ def translate(tokens: list[dict[str, str | None]]) -> str:
         else:
             translated_tokens.append(translate_default(token))
 
-        
+
 
 # DEPRECATED
 def translate(tokens: List[Dict[str, str]]) -> Tuple[str, List[Dict[str, str]]]:
