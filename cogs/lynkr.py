@@ -198,8 +198,24 @@ def translate(tokens: list[dict[str, str | None]]) -> str:
         elif token["text"] in ("ne", "n'", "ni"):
             negation = True
         elif (token["text"] == "pas") and (token["pos"] == "ADV"):
-            
+            pass
 
+        elif token["pos"] in ("ADJ", "NOUN", "PROPN"):
+            translated_tokens.append(translate_adj_noun_propn(token))
+
+        elif token["pos"] in ("VERB", "AUX"):
+            translated_tokens.append(translate_verb_aux(token))
+
+        elif token["pos"] == "NUM":
+            translated_tokens.append(translate_num(token))
+
+        elif token["pos"] == "PUNCT":
+            translated_tokens.append(translate_punct(token))
+
+        else:
+            translated_tokens.append(translate_default(token))
+
+        
 
 # DEPRECATED
 def translate(tokens: List[Dict[str, str]]) -> Tuple[str, List[Dict[str, str]]]:
