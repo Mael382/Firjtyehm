@@ -14,6 +14,7 @@ ANP_PATH = "./codex/lynkrANP.csv"
 VER_PATH = "./codex/lynkrVER.csv"
 NUM_PATH = "./codex/lynkrNUM.csv"
 ALL_PATH = "./codex/lynkrALL.csv"
+NOT_PATH = "./meta/untranslated.csv"
 
 NLP = spacy.load("fr_dep_news_trf")
 
@@ -260,13 +261,18 @@ class Lynkr(commands.Cog):
             await interaction.followup.send(f"Tu ne possèdes pas encore le rôle **{CODEX_ROLE_NAME}**, nécessaire pour faire usage du traducteur.\nPour l'obtenir, tu peux utiliser la commande */codex* et rentrer le mantra du Codex des Anciens !")
 
         # Données d'erreurs enregistrées pour l'opérateur (c'est moi hi hi hi) # DEPRECATED
-        text, lemma, pos = list(), list(), list()
-        for token in not_translated:
-            text.append(token["text"])
-            lemma.append(token["lemma"])
-            pos.append(token["pos"])
-        df = pd.DataFrame({"text": text, "lemma": lemma, "pos": pos})
-        df.to_csv("./meta/improvements.csv", header = False, index = False, mode = "a")
+        
+        text, lemma, pos, shape, number, tense, polarity = [], [], [], [], [], [], []
+        for untranslated_token in untranslated_tokens:
+            text.append(untranslated_token["text"])
+            lemma.append(untranslated_token["lemma"])
+            pos.append(untranslated_token["pos"])
+            shape.append(untranslated_token["shape"])
+            number.append(untranslated_token["number"])
+            tense.append(untranslated_token["tense"])
+            polarity.append(untranslated_token["polarity"])
+        df = pd.DataFrame({"text": text, "lemma": lemma, "pos": pos, "shape": shape, "number": number, "tense": tense, "polarity": polarity})
+        df.to_csv(NOT_PATH, header = False, index = False, mode = "a")
 
 
 async def setup(bot):
