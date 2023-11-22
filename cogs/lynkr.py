@@ -259,8 +259,6 @@ class Lynkr(commands.Cog):
             await interaction.followup.send(translation)
         else:
             await interaction.followup.send(f"Tu ne possèdes pas encore le rôle **{CODEX_ROLE_NAME}**, nécessaire pour faire usage du traducteur.\nPour l'obtenir, tu peux utiliser la commande */codex* et rentrer le mantra du Codex des Anciens !")
-
-        # Données d'erreurs enregistrées pour l'opérateur (c'est moi hi hi hi) # DEPRECATED
         
         text, lemma, pos, shape, number, tense, polarity = [], [], [], [], [], [], []
         for untranslated_token in untranslated_tokens:
