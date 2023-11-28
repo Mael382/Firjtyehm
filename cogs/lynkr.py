@@ -35,6 +35,14 @@ CODEX_ROLE_NAME = "Codex"
 
 
 def tokenize(text: str, nlp: spacy.lang.fr.French) -> list[dict[str, str | None]]:
+    """
+    Tokenise un texte "Commun" sur les attributs suivants, lorsqu'ils existent : le texte, le lemme, le tag, la casse, le nombre, le temps et la polarité.
+    Arguments:
+        text: Texte "Commun" à tokenizer.
+        nlp: Pipeline SpaCy de tokenisation.
+    Returns:
+        La liste des tokens du texte "Commun".
+    """
     doc = nlp(text)
     tokens = []
 
@@ -60,8 +68,23 @@ def tokenize(text: str, nlp: spacy.lang.fr.French) -> list[dict[str, str | None]
     return tokens
 
 def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, str | None]]]:
+    """
+    Traduit et recompose une liste de tokens "Commun" en "Lynkr", lorsque la traduction existe.
+    Arguments:
+        tokens: Liste de tokens "Commun".
+    Returns:
+        La traduction du texte engendrant la liste de tokens et la liste des tokens non traduits.
+    """
 
     def apply_case(text: str, shape: str) -> str:
+        """
+        Applique la casse au texte.
+        Arguments:
+            text: Texte à formater.
+            shape: Format de casse à appliquer.
+        Returns:
+            Le texte formaté au niveau de la casse.
+        """
 
         if shape.islower():
             cased_text = text.lower()
@@ -75,6 +98,9 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
         return cased_text
 
     def apply_spaces(texts: list[str]) -> list[str]:
+        """
+        """
+
         spaced_texts = [texts[0]]
 
         if len(texts) > 1:
@@ -91,16 +117,25 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
         return spaced_texts
 
     def translate_au_revoir(shapes: tuple[str, str]) -> tuple[str, str]:
+        """
+        """
+
         translated_tokens = (apply_case("paers", shapes[0]), apply_case("esperita", shapes[1]))
 
         return translated_tokens
 
     def translate_peut_etre(shape: str) -> str:
+        """
+        """
+
         translated_token = apply_case("pyeséa", shape)
 
         return translated_token
 
     def translate_adj_noun_propn(token: dict[str, str | None], series: pd.core.series.Series = ANP_SERIES) -> tuple[str, bool]:
+        """
+        """
+
         lemma = token["lemma"]
         shape = token["shape"]
         correctly_translated = True
@@ -118,6 +153,9 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
         return translated_token, correctly_translated
 
     def translate_verb_aux(token: dict[str, str | None], negation: bool, series: pd.core.series.Series = VER_SERIES) -> tuple[str, bool]:
+        """
+        """
+
         lemma = token["lemma"]
         shape = token["shape"]
         correctly_translated = True
@@ -149,6 +187,9 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
         return translated_token, correctly_translated
 
     def translate_num(token: dict[str, str | None], series: pd.core.series.Series = NUM_SERIES) -> tuple[str, bool]:
+        """
+        """
+
         text = token["text"]
         shape = token["shape"]
         correctly_translated = True
@@ -167,11 +208,17 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
         return translated_token, correctly_translated
 
     def translate_punct(token: dict[str, str | None]) -> str:
+        """
+        """
+
         translated_token = token["text"]
 
         return translated_token
 
     def translate_default(token: dict[str, str | None], series: pd.core.series.Series = ALL_SERIES) -> tuple[str, bool]:
+        """
+        """
+
         lemma = token["lemma"]
         shape = token["shape"]
         correctly_translated = True
