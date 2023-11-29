@@ -99,6 +99,11 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
     def apply_spaces(texts: list[str]) -> list[str]:
         """
+        Ajoute des espaces aux éléments d'un texte.
+        Arguments:
+            texts: Liste de fragments de texte.
+        Returns:
+            La liste des fragments de texte formatés au niveau des espaces.
         """
 
         spaced_texts = [texts[0]]
@@ -118,6 +123,11 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
     def translate_au_revoir(shapes: tuple[str, str]) -> tuple[str, str]:
         """
+        ...
+        Arguments:
+            shapes: ...
+        Returns:
+            ...
         """
 
         translated_tokens = (apply_case("paers", shapes[0]), apply_case("esperita", shapes[1]))
@@ -126,6 +136,11 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
     def translate_peut_etre(shape: str) -> str:
         """
+        ...
+        Arguments:
+            shape: ...
+        Returns:
+            ...
         """
 
         translated_token = apply_case("pyeséa", shape)
@@ -134,6 +149,12 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
     def translate_adj_noun_propn(token: dict[str, str | None], series: pd.core.series.Series = ANP_SERIES) -> tuple[str, bool]:
         """
+        ...
+        Arguments:
+            token: ...
+            series: ...
+        Returns:
+            ...
         """
 
         lemma = token["lemma"]
@@ -154,6 +175,13 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
     def translate_verb_aux(token: dict[str, str | None], negation: bool, series: pd.core.series.Series = VER_SERIES) -> tuple[str, bool]:
         """
+        ...
+        Arguments:
+            token: ...
+            negation: ...
+            series: ...
+        Returns:
+            ...
         """
 
         lemma = token["lemma"]
@@ -188,6 +216,12 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
     def translate_num(token: dict[str, str | None], series: pd.core.series.Series = NUM_SERIES) -> tuple[str, bool]:
         """
+        ...
+        Arguments:
+            token: ...
+            series: ...
+        Returns:
+            ...
         """
 
         text = token["text"]
@@ -209,6 +243,11 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
     def translate_punct(token: dict[str, str | None]) -> str:
         """
+        ...
+        Arguments:
+            token: ...
+        Returns:
+            ...
         """
 
         translated_token = token["text"]
@@ -217,6 +256,12 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
     def translate_default(token: dict[str, str | None], series: pd.core.series.Series = ALL_SERIES) -> tuple[str, bool]:
         """
+        ...
+        Arguments:
+            token: ...
+            series: ...
+        Returns:
+            ...
         """
 
         lemma = token["lemma"]
