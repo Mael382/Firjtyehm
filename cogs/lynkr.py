@@ -121,13 +121,14 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
         return spaced_texts
 
+    # Ajouter la règle de l'ordre
     def translate_au_revoir(shapes: tuple[str, str]) -> tuple[str, str]:
         """
-        ...
+        Traduit en "Lynkr" le texte "au revoir" en "Commun", sans respecter la règle de l'ordre.
         Arguments:
-            shapes: ...
+            shapes: Couple de casses à appliquer.
         Returns:
-            ...
+            Texte "paers esperita" formaté au niveau de la casse.
         """
 
         translated_tokens = (apply_case("paers", shapes[0]), apply_case("esperita", shapes[1]))
@@ -136,11 +137,11 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
     def translate_peut_etre(shape: str) -> str:
         """
-        ...
+        Traduit en "Lynkr" le texte "peut-être" en "Commun".
         Arguments:
-            shape: ...
+            shape: Casse à appliquer.
         Returns:
-            ...
+            Texte "pyeséa" formaté au niveau de la casse.
         """
 
         translated_token = apply_case("pyeséa", shape)
@@ -149,7 +150,7 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
     def translate_adj_noun_propn(token: dict[str, str | None], series: pd.core.series.Series = ANP_SERIES) -> tuple[str, bool]:
         """
-        ...
+        Traduit en "Lynkr" les adjectifs, les noms communs et les noms propres en "Commun".
         Arguments:
             token: ...
             series: ...
@@ -175,7 +176,7 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
     def translate_verb_aux(token: dict[str, str | None], negation: bool, series: pd.core.series.Series = VER_SERIES) -> tuple[str, bool]:
         """
-        ...
+        Traduit en "Lynkr" les verbes et les auxiliaires en "Commun".
         Arguments:
             token: ...
             negation: ...
@@ -216,7 +217,7 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
     def translate_num(token: dict[str, str | None], series: pd.core.series.Series = NUM_SERIES) -> tuple[str, bool]:
         """
-        ...
+        Traduit en "Lynkr" les nombres en "Commun".
         Arguments:
             token: ...
             series: ...
@@ -243,7 +244,7 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
     def translate_punct(token: dict[str, str | None]) -> str:
         """
-        ...
+        Traduit en "Lynkr" la ponctuation en "Commun".
         Arguments:
             token: ...
         Returns:
@@ -256,7 +257,7 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
     def translate_default(token: dict[str, str | None], series: pd.core.series.Series = ALL_SERIES) -> tuple[str, bool]:
         """
-        ...
+        Traduit en "Lynkr" les textes en "Commun".
         Arguments:
             token: ...
             series: ...
