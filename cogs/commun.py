@@ -1,17 +1,34 @@
 import discord
-
 from discord import app_commands
 from discord.ext import commands
 
 
-class Commun(commands.Cog, name = "commun"):
-    def __init__(self, bot) -> None:
+class Commun(commands.Cog):
+    """Discord cog for Firjtyehm containing commands related to translation from a foreign language into `Commun`.
+
+    :param bot: Discord bot
+    """
+
+    def __init__(self, bot: commands.Bot) -> None:
+        """Constructor method
+        """
         self.bot = bot
 
-    @app_commands.command(name = "commun", description = "Traduit en Commun, un texte écrit en Lynkr")
-    async def commun_slash(self, interaction: discord.Interaction, text: str):
-        await interaction.response.send_message("Cette fonctionnalité est en cours de développement, merci de bien vouloir patienter !", ephemeral = True)
+    @commands.Cog.listener()
+    async def on_ready(self) -> None:
+        print("Commun cog loaded")
+
+    @app_commands.command(name="commun", description="Traduction Lynkr -> Commun")
+    @app_commands.guild_only()
+    async def commun_slash(self, interaction: discord.Interaction, text: str) -> None:
+        """Translates text from `Lynkr` to `Commun`.
+
+        :param interaction: User-triggered slash command
+        :param text: User-entered text in the slash command
+        """
+        await interaction.response.send_message(":construction: Fonctionnalité encore en cours de développement. "
+                                                ":construction:", ephemeral=True)
 
 
-async def setup(bot) -> None:
+async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Commun(bot))
