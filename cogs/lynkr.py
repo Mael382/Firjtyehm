@@ -1,47 +1,38 @@
-import discord
+import os
+from dotenv import load_dotenv
+from typing import Tuple, List, Dict
 
+import discord
 from discord import app_commands
 from discord.ext import commands
 from discord.utils import get
 
-import spacy
-import pandas as pd
 from text_to_num import text2num
-# from num2words import num2words
+import pandas as pd
+import spacy
 
 
-ANP_PATH = "./codex/lynkrANP.csv"
-VER_PATH = "./codex/lynkrVER.csv"
-NUM_PATH = "./codex/lynkrNUM.csv"
-ALL_PATH = "./codex/lynkrALL.csv"
-NOT_PATH = "./meta/untranslated.csv"
-
-NLP = spacy.load("fr_dep_news_trf")
-
-ANP_SERIES = pd.read_csv(ANP_PATH).astype(pd.StringDtype(storage = "pyarrow")).set_index("lemma").squeeze()
-VER_SERIES = pd.read_csv(VER_PATH).astype(pd.StringDtype(storage = "pyarrow")).set_index("lemma").squeeze()
-# NUM_SERIES = pd.read_csv(NUM_PATH).astype(pd.StringDtype(storage = "pyarrow")).set_index("lemma").squeeze()
-NUM_SERIES = None # Le CSV doit encore être réalisé
-ALL_SERIES = pd.read_csv(ALL_PATH).astype(pd.StringDtype(storage = "pyarrow")).set_index("lemma").squeeze()
-# Faire la chasse aux ajectifs possessifs (update : wtf, pourquoi j'ai écrit ça ?)
-
-CODEX_ROLE_NAME = "Codex"
+load_dotenv()
 
 
-# data = pd.read_csv("lynkr.csv").astype(pd.StringDtype(storage = "pyarrow"))
-# data = data.sort_values(by = "lemma", key = lambda col: col.str.normalize("NFKD").str.encode("ascii", errors = "ignore").str.decode("utf-8"))
-# data = data.astype(pd.StringDtype(storage = "pyarrow"))
-# data.to_csv("lynkr.csv", index = False)
+ANP_SERIES = pd.read_csv(os.getenv("LYNKR_ANP_PATH")).astype(pd.StringDtype("pyarrow")).set_index("lemma").squeeze()
+VER_SERIES = pd.read_csv(os.getenv("LYNKR_VER_PATH")).astype(pd.StringDtype("pyarrow")).set_index("lemma").squeeze()
+# NUM_SERIES = pd.read_csv(os.getenv("LYNKR_NUM_PATH")).astype(pd.StringDtype("pyarrow")).set_index("lemma").squeeze()
+NUM_SERIES = None  # The CSV has yet to be completed
+ALL_SERIES = pd.read_csv(os.getenv("LYNKR_ALL_PATH")).astype(pd.StringDtype("pyarrow")).set_index("lemma").squeeze()
+# Hunting for possessive ajectives (update: wtf, why did I write that?)
+
+MEM_PATH = os.getenv("LYNKR_MEM_PATH")
+
+NLP = spacy.load("fr_core_news_lg")
 
 
-def tokenize(text: str, nlp: spacy.lang.fr.French) -> list[dict[str, str | None]]:
-    """
-    Tokenise un texte "Commun" sur les attributs suivants, lorsqu'ils existent : le texte, le lemme, le tag, la casse, le nombre, le temps et la polarité.
-    Arguments:
-        text: Texte "Commun" à tokenizer.
-        nlp: Pipeline SpaCy de tokenisation.
-    Returns:
-        La liste des tokens du texte "Commun".
+def tokenize(text: str, nlp: spacy.lang.fr.French = NLP) -> List[Dict[str, str | None]]:
+    """Tokenize text on the following attributes, where they exist: text, lemma, tag, case, number, tense and polarity.
+
+    :param text: Text to tokenize
+    :param nlp: Natural language processing model
+    :return: List of tokens
     """
     doc = nlp(text)
     tokens = []
@@ -67,25 +58,21 @@ def tokenize(text: str, nlp: spacy.lang.fr.French) -> list[dict[str, str | None]
 
     return tokens
 
-def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, str | None]]]:
-    """
-    Traduit et recompose une liste de tokens "Commun" en "Lynkr", lorsque la traduction existe.
-    Arguments:
-        tokens: Liste de tokens "Commun".
-    Returns:
-        La traduction du texte engendrant la liste de tokens et la liste des tokens non traduits.
+
+def translate(tokens: List[Dict[str, str | None]]) -> Tuple[str, List[Dict[str, str | None]]]:
+    """Translates and joins a list of `Commun` tokens in `Lynkr`, when the translation exists.
+
+    :param tokens: List of tokens
+    :return: Translation of the text generating the list of tokens and the list of untranslated tokens
     """
 
     def apply_case(text: str, shape: str) -> str:
-        """
-        Applique la casse au texte.
-        Arguments:
-            text: Texte à formater.
-            shape: Format de casse à appliquer.
-        Returns:
-            Le texte formaté au niveau de la casse.
-        """
+        """Applies case to text.
 
+        :param text: Text to format
+        :param shape: Case to be applied
+        :return: Case-formatted text
+        """
         if shape.islower():
             cased_text = text.lower()
         elif shape.istitle():
@@ -97,67 +84,57 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
         return cased_text
 
-    def apply_spaces(texts: list[str]) -> list[str]:
-        """
-        Ajoute des espaces aux éléments d'un texte.
-        Arguments:
-            texts: Liste de fragments de texte.
-        Returns:
-            La liste des fragments de texte formatés au niveau des espaces.
-        """
+    def apply_spaces(texts: List[str]) -> List[str]:
+        """Adds spaces to text elements.
 
+        :param texts: List of text fragments
+        :return: The list of space-formatted text fragments
+        """
         spaced_texts = [texts[0]]
 
         if len(texts) > 1:
             for text in texts[1:]:
-            # Je peux sûrement faire quelque chose de plus propre ici
-                if (text not in ("\"", ")", ",", "-", ".", "]", "}")) and (spaced_texts[-1] not in ("\"", "(", "-", "]", "}")):
+                # Surely I can do something cleaner here
+                if (text not in ("\"", ")", ",", "-", ".", "]", "}")) and (
+                        spaced_texts[-1] not in ("\"", "(", "-", "]", "}")):
                     spaced_texts.append(" ")
-                elif (text == ("\"") and (spaced_texts.count("\"")%2 == 0):
+                elif text == "\"" and spaced_texts.count("\"") % 2 == 0:
                     spaced_texts.append(" ")
-                elif (text not in (")", ",", "-", ".", "]", "}")) and (spaced_texts[-1] == "\"") and (spaced_texts.count("\"")%2 == 0):
+                elif (text not in (")", ",", "-", ".", "]", "}")) and (spaced_texts[-1] == "\"") and (
+                        spaced_texts.count("\"") % 2 == 0):
                     spaced_texts.append(" ")
                 spaced_texts.append(text)
 
         return spaced_texts
 
-    # Ajouter la règle de l'ordre
-    def translate_au_revoir(shapes: tuple[str, str]) -> tuple[str, str]:
-        """
-        Traduit en "Lynkr" le texte "au revoir" en "Commun", sans respecter la règle de l'ordre.
-        Arguments:
-            shapes: Couple de casses à appliquer.
-        Returns:
-            Texte "paers esperita" formaté au niveau de la casse.
-        """
+    def translate_au_revoir(shapes: Tuple[str, str]) -> Tuple[str, str]:
+        """Translates the text "au revoir" into `Lynkr`, without respecting the order rule.
 
+        :param shapes: Cases to be applied
+        :return: Case-sensitive text "paers esperita"
+        """
+        # Add the order rule
         translated_tokens = (apply_case("paers", shapes[0]), apply_case("esperita", shapes[1]))
 
         return translated_tokens
 
     def translate_peut_etre(shape: str) -> str:
-        """
-        Traduit en "Lynkr" le texte "peut-être" en "Commun".
-        Arguments:
-            shape: Casse à appliquer.
-        Returns:
-            Texte "pyeséa" formaté au niveau de la casse.
-        """
+        """Translates the text "peut-être" into `Lynkr`.
 
+        :param shape: Case to be applied
+        :return: Case-sensitive text "pyeséa".
+        """
         translated_token = apply_case("pyeséa", shape)
 
         return translated_token
 
-    def translate_adj_noun_propn(token: dict[str, str | None], series: pd.core.series.Series = ANP_SERIES) -> tuple[str, bool]:
-        """
-        Traduit en "Lynkr" les adjectifs, les noms communs et les noms propres en "Commun".
-        Arguments:
-            token: ...
-            series: ...
-        Returns:
-            ...
-        """
+    def translate_adj_noun_propn(token: Dict[str, str | None], series: pd.core.series.Series = ANP_SERIES) -> Tuple[str, bool]:
+        """Translates adjectives, nouns and pronouns into `Lynkr`.
 
+        :param token: ...
+        :param series: ...
+        :return: ...
+        """
         lemma = token["lemma"]
         shape = token["shape"]
         correctly_translated = True
@@ -174,17 +151,15 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
         return translated_token, correctly_translated
 
-    def translate_verb_aux(token: dict[str, str | None], negation: bool, series: pd.core.series.Series = VER_SERIES) -> tuple[str, bool]:
-        """
-        Traduit en "Lynkr" les verbes et les auxiliaires en "Commun".
-        Arguments:
-            token: ...
-            negation: ...
-            series: ...
-        Returns:
-            ...
-        """
+    def translate_verb_aux(token: Dict[str, str | None], negation: bool, series: pd.core.series.Series = VER_SERIES) -> \
+            Tuple[str, bool]:
+        """Translates verbs and auxiliaries into `Lynkr`.
 
+        :param token: ...
+        :param negation: ...
+        :param series: ...
+        :return: ...
+        """
         lemma = token["lemma"]
         shape = token["shape"]
         correctly_translated = True
@@ -209,22 +184,19 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
                 translated_token = translated_token[:-1] + "f"
             translated_token = apply_case(translated_token, shape)
         else:
-            # Ajouter une fonctionnalitée de recherche de synonymes
+            # Add a synonym search function
             translated_token = "**" + apply_case(token["text"], shape) + "**"
             correctly_translated = False
 
         return translated_token, correctly_translated
 
-    def translate_num(token: dict[str, str | None], series: pd.core.series.Series = NUM_SERIES) -> tuple[str, bool]:
-        """
-        Traduit en "Lynkr" les nombres en "Commun".
-        Arguments:
-            token: ...
-            series: ...
-        Returns:
-            ...
-        """
+    def translate_num(token: Dict[str, str | None], series: pd.core.series.Series = NUM_SERIES) -> Tuple[str, bool]:
+        """Translates numbers into `Lynkr`.
 
+        :param token: ...
+        :param series: ...
+        :return: ...
+        """
         text = token["text"]
         shape = token["shape"]
         correctly_translated = True
@@ -233,8 +205,8 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
             translated_token = text
         else:
             try:
-                numbered_token = text2num(token["lemma"], lang = "fr", relaxed = True)
-                # Créer une opération num2word pour le Lynkr
+                numbered_token = text2num(token["lemma"], lang="fr", relaxed=True)
+                # Create a num2word operation for Lynkr
                 translated_token = str(numbered_token)
             except:
                 translated_token = "**" + apply_case(text, shape) + "**"
@@ -242,29 +214,23 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
         return translated_token, correctly_translated
 
-    def translate_punct(token: dict[str, str | None]) -> str:
-        """
-        Traduit en "Lynkr" la ponctuation en "Commun".
-        Arguments:
-            token: ...
-        Returns:
-            ...
-        """
+    def translate_punct(token: Dict[str, str | None]) -> str:
+        """Translates punctuation into `Lynkr`.
 
+        :param token: ...
+        :return: ...
+        """
         translated_token = token["text"]
 
         return translated_token
 
-    def translate_default(token: dict[str, str | None], series: pd.core.series.Series = ALL_SERIES) -> tuple[str, bool]:
-        """
-        Traduit en "Lynkr" les textes en "Commun".
-        Arguments:
-            token: ...
-            series: ...
-        Returns:
-            ...
-        """
+    def translate_default(token: Dict[str, str | None], series: pd.core.series.Series = ALL_SERIES) -> Tuple[str, bool]:
+        """Translates texts into "Lynkr".
 
+        :param token: ...
+        :param series: ...
+        :return: ...
+        """
         lemma = token["lemma"]
         shape = token["shape"]
         correctly_translated = True
@@ -272,7 +238,7 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
         if lemma in series.index:
             translated_token = apply_case(series[lemma], shape)
         else:
-            # Ajouter une fonctionnalitée de recherche de synonymes
+            # Add a synonym search function
             translated_token = "**" + apply_case(token["text"], shape) + "**"
             correctly_translated = False
 
@@ -280,8 +246,10 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
     translated_tokens = []
     untranslated_tokens = []
-    penultimate_token = {"text": None, "lemma": None, "pos": None, "shape": None, "number": None, "tense": None, "polarity": None}
-    antepenultimate_token = {"text": None, "lemma": None, "pos": None, "shape": None, "number": None, "tense": None, "polarity": None}
+    penultimate_token = {"text": None, "lemma": None, "pos": None, "shape": None, "number": None, "tense": None,
+                         "polarity": None}
+    antepenultimate_token = {"text": None, "lemma": None, "pos": None, "shape": None, "number": None, "tense": None,
+                             "polarity": None}
     negation = False
 
     for i, token in enumerate(tokens):
@@ -294,7 +262,8 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
             translated_tokens.pop()
             translated_tokens.extend(translate_au_revoir((token["shape"], penultimate_token["shape"])))
 
-        elif (token["text"] == "être") and (penultimate_token["text"] == "-") and (antepenultimate_token["text"] == "peut"):
+        elif (token["text"] == "être") and (penultimate_token["text"] == "-") and (
+                antepenultimate_token["text"] == "peut"):
             translated_tokens.pop()
             translated_tokens.pop()
             translated_tokens.append(translate_peut_etre(antepenultimate_token["shape"]))
@@ -311,10 +280,11 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
                 untranslated_tokens.append(token)
 
         elif token["pos"] in ("VERB", "AUX"):
-            translated_token, correctly_translated = translate_verb_aux(token)
+            translated_token, correctly_translated = translate_verb_aux(token, negation)
             translated_tokens.append(translated_token)
             if not correctly_translated:
                 untranslated_tokens.append(token)
+            negation = False
 
         elif token["pos"] == "NUM":
             translated_token, correctly_translated = translate_num(token)
@@ -338,21 +308,39 @@ def translate(tokens: list[dict[str, str | None]]) -> tuple[str, list[dict[str, 
 
 
 class Lynkr(commands.Cog):
-    def __init__(self, bot):
+    """Discord cog for Firjtyehm containing commands related to translation from `Commun` into `Lynkr`.
+
+    :param bot: Discord bot
+    """
+
+    def __init__(self, bot) -> None:
+        """Constructor method
+        """
         self.bot = bot
 
-    @app_commands.command(name = "lynkr", description = "Traduit en Lynkr, un texte écrit en Commun")
-    async def lynkr_slash(self, interaction: discord.Interaction, text: str):
-        await interaction.response.defer(ephemeral = True)
+    @commands.Cog.listener()
+    async def on_ready(self) -> None:
+        print("Lynkr cog loaded")
+
+    @app_commands.command(name="lynkr", description="Traduit en Lynkr, un texte écrit en Commun")
+    @app_commands.guild_only()
+    async def lynkr_slash(self, interaction: discord.Interaction, text: str) -> None:
+        """Translates text from `Commun` to `Lynkr`.
+
+        :param interaction: User-triggered slash command
+        :param text: User-entered text in the slash command
+        """
+        await interaction.response.defer(ephemeral=True)
         member = interaction.user
-        role = get(member.guild.roles, name = CODEX_ROLE_NAME)
+        role = get(member.guild.roles, name="Codex")
         translation, untranslated_tokens = translate(tokenize(text))
 
         if member in role.members:
             await interaction.followup.send(translation)
         else:
-            await interaction.followup.send(f"Tu ne possèdes pas encore le rôle **{CODEX_ROLE_NAME}**, nécessaire pour faire usage du traducteur.\nPour l'obtenir, tu peux utiliser la commande */codex* et rentrer le mantra du Codex des Anciens !")
-        
+            await interaction.followup.send(
+                f"Tu ne possèdes pas le rôle {role.mention}.")
+
         text, lemma, pos, shape, number, tense, polarity = [], [], [], [], [], [], []
         for untranslated_token in untranslated_tokens:
             text.append(untranslated_token["text"])
@@ -362,9 +350,10 @@ class Lynkr(commands.Cog):
             number.append(untranslated_token["number"])
             tense.append(untranslated_token["tense"])
             polarity.append(untranslated_token["polarity"])
-        df = pd.DataFrame({"text": text, "lemma": lemma, "pos": pos, "shape": shape, "number": number, "tense": tense, "polarity": polarity})
-        df.to_csv(NOT_PATH, header = False, index = False, mode = "a")
+        df = pd.DataFrame({"text": text, "lemma": lemma, "pos": pos, "shape": shape, "number": number, "tense": tense,
+                           "polarity": polarity})
+        df.to_csv(MEM_PATH, header=False, index=False, mode="a")
 
 
-async def setup(bot):
+async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Lynkr(bot))
