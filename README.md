@@ -1,5 +1,5 @@
 # Firjtyehm
-Bot Discord en Python pour la Bibliothèque du Lotus sur herobrine.fr
+Discord bot for the Lotus Library on Herobrine.fr.
 
 ## Installation
 
