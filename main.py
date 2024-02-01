@@ -1,70 +1,89 @@
 import os
+from dotenv import load_dotenv
+from datetime import timedelta, datetime, time, timezone
 
 import discord
-from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord.utils import get
 
-intents = discord.Intents().all()
-bot = commands.Bot(command_prefix = "$", intents = intents)
 
-intents.message_content = True
-intents.guilds = True
-intents.members = True
-
-client = discord.Client(intents = intents)
-tree = app_commands.CommandTree(client)
-
-os.chdir("/home/Mael382/firjtyehm")
+load_dotenv()
 
 
+TOKEN = os.getenv("TOKEN")
 
-@bot.event
-async def on_ready():
+INTENTS = discord.Intents.default()
+INTENTS.members = True
+INTENTS.message_content = True
 
-    print("Bot running with:")
-    print("Username: ", bot.user.name)
-    print("User ID: ", bot.user.id)
+OWNER_ID = int(os.getenv("OWNER_ID"))
 
-    for filename in os.listdir("./cogs"):
-        if filename.endswith(".py"):
-            if filename[:-3] not in ["view"]:
-                await bot.load_extension(f"cogs.{filename[:-3]}")
-                print("Cogs loaded")
-
-    try:
-        synced = await bot.tree.sync()
-        print(f"Synced {len(synced)} commands")
-
-    except Exception as e:
-        print(e)
+TEST_GUILD_ID = int(os.getenv("TEST_GUILD_ID"))
+MAIN_GUILD_ID = int(os.getenv("MAIN_GUILD_ID"))
 
 
-@bot.tree.command(name = "presentation", description = "Donne la description de l'institution")
-async def presentation_slash(interaction: discord.Interaction):
+class Firjtyehm(commands.Bot):
+    """Discord bot for the Lotus Library on Herobrine.fr.
 
-    with open("assets/text/desc-biblio-lotus.txt", mode = "r",
-              encoding = 'utf-8') as f:
-        desc_biblio_lotus = f.read()
+    :param testing: `True` if the bot is in debug mode, and `False` otherwise, defaults to `False`
+    """
 
-    await interaction.response.send_message(desc_biblio_lotus, ephemeral = True)
+    def __init__(self, testing: bool = False) -> None:
+        """Constructor method
+        """
+        super().__init__(command_prefix="!", intents=INTENTS)
+        self.testing = testing
 
-@bot.tree.command(name = "codex", description = "Donne accès au rôle 'Détenteur du Codex' en échange du mantra du Codex des Anciens")
-async def codex_slash(interaction: discord.Interaction, mantra: str):
-    await interaction.response.defer(ephemeral = True)
-    member = interaction.user
-    role = get(member.guild.roles, name = "Détenteur du Codex")
+    async def setup_hook(self) -> None:
+        # Cogs loading
+        for filename in os.listdir("./cogs"):
+            if filename.endswith(".py"):
+                await self.load_extension(f"cogs.{filename[:-3]}")
+        # Commands syncing
+        if self.testing:
+            test_guild = discord.Object(id=TEST_GUILD_ID)
+            self.tree.copy_global_to(guild=test_guild)
+            await self.tree.sync(guild=test_guild)
+        else:
+            await self.tree.sync()
 
-    if member in role.members:
-        await interaction.followup.send("Tu fais déjà partie des merveilleux Détenteurs du Codex !")
+    async def on_ready(self) -> None:
+        """Sends status data to bot owner when bot get online.
+        """
+        print("Firjtyehm bot online")
+        print("------")
+        # Sending status data to the bot owner
+        owner = get(self.users, id=OWNER_ID)
+        embed = discord.Embed(title=self.user.name,
+                              url="https://discord.com/channels/1056241840891887626/1056565691299405834",
+                              description="Bot has started successfully !",
+                              timestamp=datetime.today(),
+                              color=discord.Color.dark_gold())
+        embed.set_thumbnail(url=get(self.guilds, id=MAIN_GUILD_ID).icon.url)
+        embed.add_field(name="Bot ID", value=self.user.id, inline=False)
+        embed.add_field(name="Bot's servers", value="\n".join([guild.name for guild in self.guilds]), inline=False)
+        embed.add_field(name="Servers' IDs", value="\n".join([str(guild.id) for guild in self.guilds]), inline=False)
+        await owner.send(embed=embed)
+        # Starting tasks loop
+        self.is_running.start()
 
-    elif mantra.upper() == "CODEGAM MINADA":
-        await member.add_roles(role)
-        await interaction.followup.send("Félicitations, tu intègres désormais les merveilleux Détenteurs du Codex !")
+    @tasks.loop(time=time(tzinfo=timezone(timedelta(hours=1))))
+    async def is_running(self) -> None:
+        """Sends status data to bot owner every day at midnight (UTC+1).
+        """
+        owner = get(self.users, id=OWNER_ID)
+        embed = discord.Embed(title=self.user.name,
+                              url="https://discord.com/channels/1056241840891887626/1056565691299405834",
+                              description="Bot is still running !",
+                              timestamp=datetime.today(),
+                              color=discord.Color.dark_gold())
+        embed.set_thumbnail(url=get(self.guilds, id=MAIN_GUILD_ID).icon.url)
+        embed.add_field(name="Bot ID", value=self.user.id, inline=False)
+        embed.add_field(name="Bot's servers", value="\n".join([guild.name for guild in self.guilds]), inline=False)
+        embed.add_field(name="Servers' IDs", value="\n".join([str(guild.id) for guild in self.guilds]), inline=False)
+        await owner.send(embed=embed)
 
-    else:
-        await interaction.followup.send("Pas de chance, c'est raté !")
 
-
-
-# bot.run("ID")
+if __name__ == "__main__":
+    bot = Firjtyehm(testing=False)
+    bot.run(TOKEN)
