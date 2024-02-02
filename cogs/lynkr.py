@@ -10,6 +10,8 @@ from discord.utils import get
 from text_to_num import text2num
 import pandas as pd
 import spacy
+import requests
+from bs4 import BeautifulSoup
 
 
 load_dotenv()
