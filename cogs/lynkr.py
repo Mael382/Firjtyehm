@@ -107,6 +107,31 @@ def translate(tokens: List[Dict[str, str | None]]) -> Tuple[str, List[Dict[str, 
 
         return spaced_texts
 
+    def get_synonyms(token: Dict[str, str | None]) -> Tuple[str, ...]:
+        """...
+
+        :param token: ...
+        :return: ...
+        """
+        pos = token["pos"]
+        lemma = token["lemma"]
+        if pos == "NOUN":
+            response = requests.get(f"https://www.cnrtl.fr/synonymie/{lemma}/substantif")
+        elif pos == "ADJ":
+            response = requests.get(f"https://www.cnrtl.fr/synonymie/{lemma}/adjectif")
+        elif pos in ("VERB", "AUX"):
+            response = requests.get(f"https://www.cnrtl.fr/synonymie/{lemma}/verbe")
+        elif pos == "ADV":
+            response = requests.get(f"https://www.cnrtl.fr/synonymie/{lemma}/adverbe")
+        elif pos == "INTJ":
+            response = requests.get(f"https://www.cnrtl.fr/synonymie/{lemma}/interjection")
+        else:
+            response = requests.get(f"https://www.cnrtl.fr/synonymie/{lemma}")
+        soup = BeautifulSoup(response.content, "html.parser")
+        synonyms = tuple(map(lambda x: x.a.text, soup.find_all("td", attrs={"class": "syno_format"})))
+
+        return synonyms
+
     def translate_au_revoir(shapes: Tuple[str, str]) -> Tuple[str, str]:
         """Translates the text "au revoir" into `Lynkr`, without respecting the order rule.
 
@@ -128,7 +153,8 @@ def translate(tokens: List[Dict[str, str | None]]) -> Tuple[str, List[Dict[str, 
 
         return translated_token
 
-    def translate_adj_noun_propn(token: Dict[str, str | None], series: pd.core.series.Series = ANP_SERIES) -> Tuple[str, bool]:
+    def translate_adj_noun_propn(token: Dict[str, str | None], series: pd.core.series.Series = ANP_SERIES) -> Tuple[
+        str, bool]:
         """Translates adjectives, nouns and pronouns into `Lynkr`.
 
         :param token: ...
@@ -137,19 +163,26 @@ def translate(tokens: List[Dict[str, str | None]]) -> Tuple[str, List[Dict[str, 
         """
         lemma = token["lemma"]
         shape = token["shape"]
-        correctly_translated = True
+        translated_lemma = None
+        is_translated = True
 
         if lemma in series.index:
-            translated_token = series[lemma]
-            if (token["number"] == "Plur") and (translated_token[-1] != "s"):
-                translated_token += "s"
-            translated_token = apply_case(translated_token, shape)
+            translated_lemma = series[lemma]
         else:
-            # Ajouter une fonctionnalitée de recherche de synonymes
+            synonyms = get_synonyms(token)
+            for synonym in synonyms:
+                if synonym in series.index:
+                    translated_lemma = series[synonym]
+                    break
+        if translated_lemma:
+            if (token["number"] == "Plur") and (translated_lemma[-1] != "s"):
+                translated_lemma += "s"
+            translated_token = apply_case(translated_lemma, shape)
+        else:
             translated_token = "**" + apply_case(token["text"], shape) + "**"
-            correctly_translated = False
+            is_translated = False
 
-        return translated_token, correctly_translated
+        return translated_token, is_translated
 
     def translate_verb_aux(token: Dict[str, str | None], negation: bool, series: pd.core.series.Series = VER_SERIES) -> \
             Tuple[str, bool]:
@@ -162,7 +195,8 @@ def translate(tokens: List[Dict[str, str | None]]) -> Tuple[str, List[Dict[str, 
         """
         lemma = token["lemma"]
         shape = token["shape"]
-        correctly_translated = True
+        translated_lemma = None
+        is_translated = True
 
         if negation:
             prefix = "fran-"
@@ -174,21 +208,28 @@ def translate(tokens: List[Dict[str, str | None]]) -> Tuple[str, List[Dict[str, 
         elif lemma == "vivre":
             translated_token = apply_case(prefix + "virvilem", shape)
         elif lemma in series.index:
-            tense = token["tense"]
-            translated_token = prefix + series[lemma]
-            if tense == "Pres":
-                translated_token = translated_token[:-1]
-            elif tense == "Past":
-                translated_token = translated_token[:-1] + "p"
-            elif tense == "Fut":
-                translated_token = translated_token[:-1] + "f"
-            translated_token = apply_case(translated_token, shape)
+            translated_lemma = series[lemma]
         else:
-            # Add a synonym search function
+            synonyms = get_synonyms(token)
+            for synonym in synonyms:
+                if synonym in series.index:
+                    translated_lemma = series[synonym]
+                    break
+        if translated_lemma:
+            tense = token["tense"]
+            translated_lemma = f"{prefix}{translated_lemma}"
+            if tense == "Pres":
+                translated_lemma = translated_lemma[:-1]
+            elif tense == "Past":
+                translated_lemma = translated_lemma[:-1] + "p"
+            elif tense == "Fut":
+                translated_lemma = translated_lemma[:-1] + "f"
+            translated_token = apply_case(translated_lemma, shape)
+        else:
             translated_token = "**" + apply_case(token["text"], shape) + "**"
-            correctly_translated = False
+            is_translated = False
 
-        return translated_token, correctly_translated
+        return translated_token, is_translated
 
     def translate_num(token: Dict[str, str | None], series: pd.core.series.Series = NUM_SERIES) -> Tuple[str, bool]:
         """Translates numbers into `Lynkr`.
@@ -199,7 +240,7 @@ def translate(tokens: List[Dict[str, str | None]]) -> Tuple[str, List[Dict[str, 
         """
         text = token["text"]
         shape = token["shape"]
-        correctly_translated = True
+        is_translated = True
 
         if "d" in shape:
             translated_token = text
@@ -210,9 +251,9 @@ def translate(tokens: List[Dict[str, str | None]]) -> Tuple[str, List[Dict[str, 
                 translated_token = str(numbered_token)
             except:
                 translated_token = "**" + apply_case(text, shape) + "**"
-                correctly_translated = False
+                is_translated = False
 
-        return translated_token, correctly_translated
+        return translated_token, is_translated
 
     def translate_punct(token: Dict[str, str | None]) -> str:
         """Translates punctuation into `Lynkr`.
@@ -233,16 +274,24 @@ def translate(tokens: List[Dict[str, str | None]]) -> Tuple[str, List[Dict[str, 
         """
         lemma = token["lemma"]
         shape = token["shape"]
-        correctly_translated = True
+        translated_lemma = None
+        is_translated = True
 
         if lemma in series.index:
-            translated_token = apply_case(series[lemma], shape)
+            translated_lemma = series[lemma]
         else:
-            # Add a synonym search function
+            synonyms = get_synonyms(token)
+            for synonym in synonyms:
+                if synonym in series.index:
+                    translated_lemma = series[synonym]
+                    break
+        if translated_lemma:
+            translated_token = apply_case(translated_lemma, shape)
+        else:
             translated_token = "**" + apply_case(token["text"], shape) + "**"
-            correctly_translated = False
+            is_translated = False
 
-        return translated_token, correctly_translated
+        return translated_token, is_translated
 
     translated_tokens = []
     untranslated_tokens = []
