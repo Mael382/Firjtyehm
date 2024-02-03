@@ -73,9 +73,12 @@ class TokenDict:
 
         :param nlp: Text-processing pipeline
         """
-        if self.pos == "ADJ":
+        if self.pos == "PROPN":
+            self.synonyms = ()
+            return
+        elif self.pos == "ADJ":
             response = requests.get(f"https://www.cnrtl.fr/synonymie/{self.lemma}/adjectif")
-        elif self.pos in ("NOUN", "PROPN"):
+        elif self.pos == "NOUN":
             response = requests.get(f"https://www.cnrtl.fr/synonymie/{self.lemma}/substantif")
         elif self.pos in ("VERB", "AUX"):
             response = requests.get(f"https://www.cnrtl.fr/synonymie/{self.lemma}/verbe")
@@ -91,7 +94,6 @@ class TokenDict:
         sorted_synonyms = sorted(nlp.pipe(synonyms), key=lambda x: x.similarity(self.sentence), reverse=True)
 
         self.synonyms = tuple(map(lambda x: x.text, sorted_synonyms))
-        print(self.synonyms)
 
     # Remove Optional when num series created | Make it TypedDict ?
     def get_lynkr(self, negation: bool = False, lynkr_series: Dict[str, Optional[Series]] = LYNKR_SERIES) -> bool:
