@@ -205,14 +205,15 @@ class TokenDict:
     def apply_case_to_lynkr(self) -> None:
         """...
         """
-        if self.shape.islower():
-            self.lynkr = self.lynkr.lower()
-        elif self.shape.istitle():
-            self.lynkr = self.lynkr.title()
-        elif self.shape.isupper():
-            self.lynkr = self.lynkr.upper()
-        else:
-            self.lynkr = self.lynkr.capitalize()
+        if self.lynkr:
+            if self.shape.islower():
+                self.lynkr = self.lynkr.lower()
+            elif self.shape.istitle():
+                self.lynkr = self.lynkr.title()
+            elif self.shape.isupper():
+                self.lynkr = self.lynkr.upper()
+            else:
+                self.lynkr = self.lynkr.capitalize()
 
 
 def tokenize_text(text: str, nlp: Language = NLP) -> Tuple[TokenDict, ...]:
