@@ -61,7 +61,7 @@ class Firjtyehm(commands.Bot):
                               timestamp=datetime.today(),
                               color=discord.Color.dark_gold())
         embed.set_thumbnail(url=get(self.guilds, id=MAIN_GUILD_ID).icon.url)
-        embed.add_field(name="Bot ID", value=self.user.id, inline=False)
+        embed.add_field(name="Bot's ID", value=self.user.id, inline=False)
         embed.add_field(name="Bot's servers", value="\n".join([guild.name for guild in self.guilds]), inline=False)
         embed.add_field(name="Servers' IDs", value="\n".join([str(guild.id) for guild in self.guilds]), inline=False)
         await owner.send(embed=embed)
@@ -79,7 +79,7 @@ class Firjtyehm(commands.Bot):
                               timestamp=datetime.today(),
                               color=discord.Color.dark_gold())
         embed.set_thumbnail(url=get(self.guilds, id=MAIN_GUILD_ID).icon.url)
-        embed.add_field(name="Bot ID", value=self.user.id, inline=False)
+        embed.add_field(name="Bot's ID", value=self.user.id, inline=False)
         embed.add_field(name="Bot's servers", value="\n".join([guild.name for guild in self.guilds]), inline=False)
         embed.add_field(name="Servers' IDs", value="\n".join([str(guild.id) for guild in self.guilds]), inline=False)
         await owner.send(embed=embed)
