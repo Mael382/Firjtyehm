@@ -42,6 +42,7 @@ class Firjtyehm(commands.Bot):
         # Commands syncing
         if self.testing:
             test_guild = discord.Object(id=TEST_GUILD_ID)
+            self.tree.clear_commands(guild=test_guild)
             self.tree.copy_global_to(guild=test_guild)
             await self.tree.sync(guild=test_guild)
         else:
