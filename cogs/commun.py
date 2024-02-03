@@ -20,11 +20,11 @@ class Commun(commands.Cog):
 
     @app_commands.command(name="commun", description="Traduction Lynkr -> Commun")
     @app_commands.guild_only()
-    async def commun_slash(self, interaction: discord.Interaction, text: str) -> None:
+    async def commun_slash(self, interaction: discord.Interaction, texte: str) -> None:
         """Translates text from `Lynkr` to `Commun`.
 
         :param interaction: User-triggered slash command
-        :param text: User-entered text in the slash command
+        :param texte: User-entered text in the slash command
         """
         await interaction.response.send_message(":construction: Fonctionnalité encore en cours de développement. "
                                                 ":construction:", ephemeral=True)
