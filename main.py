@@ -85,5 +85,5 @@ class Firjtyehm(commands.Bot):
 
 
 if __name__ == "__main__":
-    bot = Firjtyehm(testing=False)
+    bot = Firjtyehm(testing=True)
     bot.run(TOKEN)
