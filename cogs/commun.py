@@ -16,6 +16,8 @@ class Commun(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
+        """...
+        """
         print("Commun cog loaded")
 
     @app_commands.command(name="commun", description="Traduction Lynkr -> Commun")
@@ -31,4 +33,6 @@ class Commun(commands.Cog):
 
 
 async def setup(bot: commands.Bot) -> None:
+    """...
+    """
     await bot.add_cog(Commun(bot))
