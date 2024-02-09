@@ -1,9 +1,12 @@
-import os
+from pathlib import Path
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 from discord.utils import get
+
+
+MAIN_FOLDER = Path(__file__).parent.parent.resolve()
 
 
 class Institution(commands.Cog):
@@ -19,6 +22,8 @@ class Institution(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
+        """...
+        """
         print("Institution cog loaded")
 
     @app_commands.command(name="presentation", description="Description de la Bibliothèque du Lotus")
@@ -27,8 +32,7 @@ class Institution(commands.Cog):
 
         :param interaction: User-triggered slash command
         """
-        root = os.path.dirname(__file__)
-        with open("assets/texts/txt/desc-biblio-lotus.txt", mode="r", encoding="utf-8") as desc:
+        with open(MAIN_FOLDER / "assets/texts/txt/desc-biblio-lotus.txt", mode="r", encoding="utf-8") as desc:
             presentation = desc.read()
         await interaction.response.send_message(presentation, ephemeral=True)
 
@@ -54,4 +58,6 @@ class Institution(commands.Cog):
 
 
 async def setup(bot: commands.Bot) -> None:
+    """...
+    """
     await bot.add_cog(Institution(bot))
