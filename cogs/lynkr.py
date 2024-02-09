@@ -1,5 +1,5 @@
-import os
-from dotenv import load_dotenv
+from pathlib import Path
+import logging
 from typing import Optional, Tuple, List, Dict
 
 import discord
@@ -16,25 +16,25 @@ from text_to_num import text2num
 import requests
 from bs4 import BeautifulSoup
 
+MAIN_FOLDER = Path(__file__).parent.parent.resolve()
 
-os.environ["SPACY_WARNING_IGNORE"] = "W008"
-load_dotenv()
+LYNKR_SERIES = {"adj_noun_propn": pd.read_csv(MAIN_FOLDER / "assets/texts/csv/lynkr/adj-noun-propn.csv").astype(
+                    pd.StringDtype("pyarrow")).set_index("lemma").squeeze(),
+                "verb_aux": pd.read_csv(MAIN_FOLDER / "assets/texts/csv/lynkr/verb-aux.csv").astype(
+                    pd.StringDtype("pyarrow")).set_index("lemma").squeeze(),
+                "num": None,
+                "others": pd.read_csv(MAIN_FOLDER / "assets/texts/csv/lynkr/others.csv").astype(
+                    pd.StringDtype("pyarrow")).set_index("lemma").squeeze()}
+# "num": pd.read_csv(MAIN_FOLDER / "assets/texts/csv/lynkr/num.csv").astype(pd.StringDtype("pyarrow")).set_index(
+# "lemma").squeeze() Hunting for possessive adjectives (update: wtf, why did I write that?)
 
-
-LYNKR_SERIES = {
-    "adj_noun_propn": pd.read_csv(os.getenv("LYNKR_ADJ-NOUN-PROPN_PATH")).astype(pd.StringDtype("pyarrow")).set_index(
-        "lemma").squeeze(),
-    "verb_aux": pd.read_csv(os.getenv("LYNKR_VERB-AUX_PATH")).astype(pd.StringDtype("pyarrow")).set_index(
-        "lemma").squeeze(),
-    "num": None,
-    "others": pd.read_csv(os.getenv("LYNKR_OTHERS_PATH")).astype(pd.StringDtype("pyarrow")).set_index(
-        "lemma").squeeze()}
-# "num": pd.read_csv(os.getenv("LYNKR_NUM_PATH")).astype(pd.StringDtype("pyarrow")).set_index("lemma").squeeze()
-# Hunting for possessive ajectives (update: wtf, why did I write that?)
-
-MEMORY_PATH = os.getenv("LYNKR_MEMORY_PATH")
+MEMORY_PATH = MAIN_FOLDER / "assets/texts/csv/lynkr/memory.csv"
 
 NLP = spacy.load("fr_core_news_lg")
+
+
+logger = logging.getLogger("spacy")
+logger.setLevel(logging.ERROR)
 
 
 class TokenDict:
@@ -97,7 +97,12 @@ class TokenDict:
 
     # Remove Optional when num series created | Make it TypedDict ?
     def get_lynkr(self, negation: bool = False, lynkr_series: Dict[str, Optional[Series]] = LYNKR_SERIES) -> bool:
-        """"""
+        """...
+
+        :param negation: ...
+        :param lynkr_series: ...
+        :return: ...
+        """
         is_negative = negation
 
         def translate_adj_noun_propn(series: Series = lynkr_series["adj_noun_propn"]) -> None:
@@ -327,6 +332,8 @@ class Lynkr(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self) -> None:
+        """...
+        """
         print("Lynkr cog loaded")
 
     @app_commands.command(name="lynkr", description="Traduit en Lynkr, un texte écrit en Commun")
@@ -365,4 +372,6 @@ class Lynkr(commands.Cog):
 
 
 async def setup(bot: commands.Bot) -> None:
+    """...
+    """
     await bot.add_cog(Lynkr(bot))
