@@ -30,7 +30,7 @@ LYNKR_SERIES = {"adj_noun_propn": pd.read_csv(MAIN_FOLDER / "assets/texts/csv/ly
 
 MEMORY_PATH = MAIN_FOLDER / "assets/texts/csv/lynkr/memory.csv"
 
-NLP = spacy.load("fr_core_news_lg")
+NLP = spacy.load("fr_core_news_md")
 
 
 logger = logging.getLogger("spacy")
