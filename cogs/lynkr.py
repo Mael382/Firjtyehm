@@ -16,10 +16,11 @@ from text_to_num import text2num
 import requests
 from bs4 import BeautifulSoup
 
+
 MAIN_FOLDER = Path(__file__).parent.parent.resolve()
 
 LYNKR_SERIES = {"adj_noun_propn": pd.read_csv(MAIN_FOLDER / "assets/texts/csv/lynkr/adj-noun-propn.csv").astype(
-                    pd.StringDtype("pyarrow")).set_index("lemma").squeeze(),
+    pd.StringDtype("pyarrow")).set_index("lemma").squeeze(),
                 "verb_aux": pd.read_csv(MAIN_FOLDER / "assets/texts/csv/lynkr/verb-aux.csv").astype(
                     pd.StringDtype("pyarrow")).set_index("lemma").squeeze(),
                 "num": None,
@@ -49,7 +50,10 @@ class TokenDict:
     polarity: Optional[str] = None
     sentence: Optional[Doc] = None
     synonyms: Optional[Tuple[Optional[str], ...]] = None
+    best_synonym: Optional[str] = None
     lynkr: Optional[str] = None
+    is_translated: bool = False
+    is_synonymed: bool = False
 
     def __init__(self, token: Token, sentence: Optional[Span] = None):
         self.text = token.text
@@ -110,20 +114,23 @@ class TokenDict:
 
             :param series: ...
             """
-            is_translated = False
-
             if self.lemma in series.index:
                 self.lynkr = series[self.lemma]
-                is_translated = True
+                self.is_translated = True
             else:
                 self.get_synonyms()
                 for synonym in self.synonyms:
                     if synonym in series.index:
+                        self.best_synonym = synonym
                         self.lynkr = series[synonym]
-                        is_translated = True
+                        self.is_translated = True
+                        self.is_synonymed = True
                         break
 
-            if is_translated:
+                if not self.is_translated:
+                    self.lynkr = self.text
+
+            if self.is_translated:
                 if (self.number == "Plur") and (self.lynkr[-1] != "s"):
                     self.lynkr += "s"
 
@@ -132,8 +139,6 @@ class TokenDict:
 
             :param series: ...
             """
-            is_translated = False
-
             if negation:
                 prefix = "fran-"
             else:
@@ -146,16 +151,21 @@ class TokenDict:
 
             elif self.lemma in series.index:
                 self.lynkr = series[self.lemma]
-                is_translated = True
+                self.is_translated = True
             else:
                 self.get_synonyms()
                 for synonym in self.synonyms:
                     if synonym in series.index:
+                        self.best_synonym = synonym
                         self.lynkr = series[synonym]
-                        is_translated = True
+                        self.is_translated = True
+                        self.is_synonymed = True
                         break
 
-            if is_translated:
+                if not self.is_translated:
+                    self.lynkr = self.text
+
+            if self.is_translated:
                 if self.tense == "Pres":
                     self.lynkr = self.lynkr[:-1]
                 elif self.tense == "Past":
@@ -168,6 +178,7 @@ class TokenDict:
             """
             if "d" in self.shape:
                 self.lynkr = self.text
+                self.is_translated = True
             else:
                 try:
                     lemma_as_num = text2num(self.lemma, lang="fr", relaxed=True)
@@ -180,6 +191,7 @@ class TokenDict:
             """...
             """
             self.lynkr = self.text
+            self.is_translated = True
 
         def translate_default(series: Series = lynkr_series["others"]) -> None:
             """...
@@ -188,12 +200,19 @@ class TokenDict:
             """
             if self.lemma in series.index:
                 self.lynkr = series[self.lemma]
+                self.is_translated = True
             else:
                 self.get_synonyms()
                 for synonym in self.synonyms:
                     if synonym in series.index:
+                        self.best_synonym = synonym
                         self.lynkr = series[synonym]
+                        self.is_translated = True
+                        self.is_synonymed = True
                         break
+
+                if not self.is_translated:
+                    self.lynkr = self.text
 
         if self.pos in ("ADJ", "NOUN", "PROPN"):
             translate_adj_noun_propn()
@@ -212,7 +231,7 @@ class TokenDict:
     def apply_case_to_lynkr(self) -> None:
         """...
         """
-        if self.lynkr:
+        if self.is_translated:
             if self.shape.islower():
                 self.lynkr = self.lynkr.lower()
             elif self.shape.istitle():
@@ -250,9 +269,11 @@ def translate_tokens(tokens: Tuple[TokenDict, ...]) -> None:
     for token in tokens:
         if token.text in ("ne", "n'", "ni"):
             token.lynkr = ""
+            token.is_translated = True
             negation = True
         elif token.text == "pas" and token.pos == "ADV":
             token.lynkr = ""
+            token.is_translated = True
         else:
             negation = token.get_lynkr(negation)
 
@@ -281,7 +302,7 @@ def apply_spaces_to_texts(texts: List[Optional[str]]) -> str:
     return "".join(spaced_texts)
 
 
-def translate_text(text: str, nlp: Language = NLP) -> Tuple[str, Tuple[TokenDict, ...]]:
+def translate_text(text: str, nlp: Language = NLP) -> Tuple[str, Tuple[Tuple[str, str], ...], Tuple[TokenDict, ...]]:
     """...
 
     :param text: ...
@@ -291,8 +312,9 @@ def translate_text(text: str, nlp: Language = NLP) -> Tuple[str, Tuple[TokenDict
     tokens = tokenize_text(text, nlp)
     translate_tokens(tokens)
 
-    lynkr_texts = []
-    untranslated_tokens = []
+    lynkr = []
+    synonymed = []
+    untranslated = []
     for i, token in enumerate(tokens):
 
         if i < len(tokens) - 2:
@@ -308,15 +330,17 @@ def translate_text(text: str, nlp: Language = NLP) -> Tuple[str, Tuple[TokenDict
 
         token.apply_case_to_lynkr()
 
-        if token.lynkr:
-            lynkr_texts.append(token.lynkr)
+        if token.is_translated:
+            lynkr.append(token.lynkr)
+            if token.is_synonymed:
+                synonymed.append((token.lemma, token.best_synonym))
         else:
-            lynkr_texts.append(f"**{token.text}**")
-            untranslated_tokens.append(token)
+            lynkr.append(f"`{token.text}`")
+            untranslated.append(token)
 
-    translated_text = apply_spaces_to_texts(lynkr_texts)
+    translated = apply_spaces_to_texts(lynkr)
 
-    return translated_text, tuple(untranslated_tokens)
+    return translated, tuple(synonymed), tuple(untranslated)
 
 
 class Lynkr(commands.Cog):
@@ -342,18 +366,27 @@ class Lynkr(commands.Cog):
         """Translates text from `Commun` to `Lynkr`.
 
         :param interaction: User-triggered slash command
-        :param texte: User-entered text in the slash command
+        :param texte: Texte Commun à traduire en Lynkr
         """
         await interaction.response.defer(ephemeral=True)
         member = interaction.user
         role = get(member.guild.roles, name="Codex")
 
         if member in role.members:
-            translated_text, untranslated_tokens = translate_text(texte)
-            await interaction.followup.send(translated_text)
+            translated, synonymed, untranslated = translate_text(texte)
+            embed = discord.Embed(title="TRADUCTION : Commun → Lynkr",
+                                  url="https://www.herobrine.fr/index.php?p=codex",
+                                  description=texte,
+                                  color=discord.Color.dark_gold())
+            embed.add_field(name="Traduction", value=translated, inline=False)
+            if len(synonymed) > 0:
+                embed.add_field(name="Synonymes",
+                                value="\n".join([f"{synonyms[0]} → {synonyms[1]}" for synonyms in synonymed]),
+                                inline=False)
+            await interaction.followup.send(embed=embed)
 
             text, lemma, shape, pos, number, tense, polarity, synonyms = [], [], [], [], [], [], [], []
-            for token in untranslated_tokens:
+            for token in untranslated:
                 text.append(token.text)
                 lemma.append(token.lemma)
                 shape.append(token.shape)
