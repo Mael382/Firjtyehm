@@ -95,7 +95,8 @@ class TokenDict:
         soup = BeautifulSoup(response.content, "html.parser")
 
         synonyms = map(lambda x: x.a.text, soup.find_all("td", attrs={"class": "syno_format"}))
-        sorted_synonyms = sorted(nlp.pipe(synonyms), key=lambda x: x.similarity(self.sentence), reverse=True)
+        kept_synonyms = filter(lambda x: x.similarity(self.sentence) > 0.3, nlp.pipe(synonyms))
+        sorted_synonyms = sorted(kept_synonyms, key=lambda x: x.similarity(self.sentence), reverse=True)
 
         self.synonyms = tuple(map(lambda x: x.text, sorted_synonyms))
 
