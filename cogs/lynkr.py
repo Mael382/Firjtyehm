@@ -151,20 +151,20 @@ class TokenDict:
                 self.lynkr = f"{prefix}virvilem"
 
             elif self.lemma in series.index:
-                self.lynkr = series[self.lemma]
+                self.lynkr = f"{prefix}{series[self.lemma]}"
                 self.is_translated = True
             else:
                 self.get_synonyms()
                 for synonym in self.synonyms:
                     if synonym in series.index:
                         self.best_synonym = synonym
-                        self.lynkr = series[synonym]
+                        self.lynkr = f"{prefix}{series[synonym]}"
                         self.is_translated = True
                         self.is_synonymed = True
                         break
 
                 if not self.is_translated:
-                    self.lynkr = self.text
+                    self.lynkr = f"{prefix}{self.text}"
 
             if self.is_translated:
                 if self.tense == "Pres":
