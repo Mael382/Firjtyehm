@@ -22,7 +22,7 @@ MAIN_FOLDER = Path(__file__).parent.parent.resolve()
 
 # Dictionnaire de traduction Commun -> Lynkr
 LYNKR_SERIES = {"GRAMNUM": pd.read_csv(MAIN_FOLDER / "assets/texts/csv/lynkr/adj-noun-propn.csv").astype(
-    pd.StringDtype("pyarrow")).set_index("lemma").squeeze(),
+                    pd.StringDtype("pyarrow")).set_index("lemma").squeeze(),
                 "GRAMCONJ": pd.read_csv(MAIN_FOLDER / "assets/texts/csv/lynkr/verb-aux.csv").astype(
                     pd.StringDtype("pyarrow")).set_index("lemma").squeeze(),
                 "X": pd.read_csv(MAIN_FOLDER / "assets/texts/csv/lynkr/other.csv").astype(
@@ -122,83 +122,85 @@ Token.set_extension("lynkr_compatible_synonyms", getter=lynkr_compatible_synonym
 Token.set_extension("lynkr_applied_synonym", default=None)
 
 
-#
+# Sous-fonction de la fonction `lynkr_lemma_translation_getter`
 def lynkr_lemma_translation_default(token: Token) -> Optional[str]:
-    """
+    """Fonction pour obtenir la traduction du lemme en Lynkr d'un token avec le tag Lynkr `GRAMNUM`, `GRAMCONJ` ou `X`.
 
-    :param token:
-    :return:
+    :param token: Le token Spacy pour lequel la traduction du lemme en Lynkr doit être obtenue.
+    :return: La traduction du lemme en Lynkr pour le token donné.
     """
-    #
+    # Sélection de la série correspondant au tag Lynkr du token
     series = LYNKR_SERIES[token._.lynkr_tag]
 
-    #
+    # Récupération des termes traduisibles Lynkr
     translatable = frozenset(series.index.to_list())
+    # Si le lemme du token est traduisible, renvoyer sa traduction correspondante
     if token.lemma_ in translatable:
         return series[token.lemma_]
 
 
+# Sous-fonction de la fonction `lynkr_lemma_translation_getter`
 def lynkr_lemma_translation_num(token: Token) -> Optional[str]:
-    """
+    """Fonction pour obtenir la traduction en Lynkr d'un token avec le tag Lynkr `NUM`.
 
-    :param token:
-    :return:
+    :param token: Le token Spacy pour lequel la traduction en Lynkr doit être obtenue.
+    :return: La traduction en Lynkr pour le token donné.
     """
-    #
+    # Si le token est écrit en chiffres, renvoyer son texte tel quel
     if "d" in token.shape_:
         return token.text
 
-    #
+    # Sinon, essayer de convertir l'écriture du token en chiffres
     else:
         try:
             text_as_num = text2num(token.text, lang="fr", relaxed=True)
         except ValueError:
             pass
         else:
-            return str(text_as_num)
+            return str(text_as_num)  # Implémenter une fonction num2text, pour retrouver une écriture en lettres
 
 
+# Sous-fonction de la fonction `lynkr_lemma_translation_getter`
 def lynkr_lemma_translation_punct(token: Token) -> str:
-    """
+    """Fonction pour obtenir la traduction en Lynkr d'un token avec le tag Lynkr `PUNCT`.
 
-    :param token:
-    :return:
+    :param token: Le token Spacy pour lequel la traduction en Lynkr doit être obtenue.
+    :return: La traduction en Lynkr pour le token donné.
     """
     return token.text
 
 
+# Sous-fonction de la fonction `lynkr_lemma_translation_getter`
 def lynkr_lemma_translation_part() -> str:
-    """
+    """Fonction pour obtenir la traduction en Lynkr d'un token avec le tag Lynkr `PART`.
 
-    :return:
+    :return: La traduction en Lynkr d'un token avec le tag Lynkr `PART`.
     """
     return ""
 
 
-#
+# Getter de la propriété personnalisée `lynkr_lemma_translation` pour les tokens Spacy
 def lynkr_lemma_translation_getter(token: Token) -> Optional[str]:
-    """
+    """Fonction pour obtenir la traduction du lemme en Lynkr d'un token donné.
 
-    :param token:
-    :return:
+    :param token: Le token Spacy pour lequel la traduction du lemme en Lynkr doit être obtenue.
+    :return: La traduction du lemme en Lynkr pour le token donné.
     """
-    #
+    # Si le tag Lynkr du token est parmi "GRAMNUM", "GRAMCONJ" ou "X", obtenir la traduction par défaut
     if token._.lynkr_tag in ("GRAMNUM", "GRAMCONJ", "X"):
         return lynkr_lemma_translation_default(token)
-
-    #
+    # Si le tag Lynkr du token est "NUM", obtenir la traduction numérale
     elif token._.lynkr_tag == "NUM":
         return lynkr_lemma_translation_num(token)
-
-    #
+    # Si le tag Lynkr du token est "PUNCT", obtenir la traduction de ponctuation
     elif token._.lynkr_tag == "PUNCT":
         return lynkr_lemma_translation_punct(token)
-
-    #
+    # Si le tag Lynkr du token est "PART", obtenir la traduction de particule
     elif token._.lynkr_tag == "PART":
         return lynkr_lemma_translation_part()
 
 
+# Application de la propriété `lynkr_lemma_translation` aux tokens Spacy
 Token.set_extension("lynkr_lemma_translation", getter=lynkr_lemma_translation_getter)
 
 
